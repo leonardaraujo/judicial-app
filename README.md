@@ -4,13 +4,25 @@
 
 Este proyecto implementa una arquitectura de aplicación web compuesta por dos partes principales:
 
+## Tipo de arquitectura
+
+El sistema utiliza una **arquitectura en capas (multi-tier)**, separando claramente:
+
+- **Frontend (capa de presentación):** Next.js + Tailwind CSS. Responsable de la interfaz de usuario, carga de documentos y visualización de resultados.
+- **Backend (capa de lógica de negocio y acceso a datos):** FastAPI (Python). Encargado del procesamiento de PDFs, extracción de metadatos, generación de embeddings, búsquedas semánticas y acceso a la base de datos PostgreSQL (con soporte vectorial mediante pgvector).
+
+Esta separación permite escalabilidad, mantenibilidad y desarrollo independiente de cada parte.
+
+---
+
+## Componentes principales
+
 - **Backend (Python, FastAPI):**
   - Procesa y analiza documentos PDF.
   - Extrae texto, metadatos y genera embeddings semánticos usando modelos de lenguaje (transformers).
   - Permite búsquedas semánticas sobre los documentos procesados.
   - Puede almacenar los resultados y embeddings en una base de datos PostgreSQL con soporte vectorial (pgvector).
 
-- **Frontend (Next.js, Tailwind CSS):**
   - Proporciona una interfaz moderna para que el usuario suba documentos PDF y realice búsquedas.
   - Muestra los resultados de la búsqueda y la metadata extraída de los documentos.
   - Se comunica con el backend mediante API REST (por ejemplo, usando axios).
