@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
-import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function SubirPage() {
   const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [step, setStep] = useState<'idle' | 'uploading' | 'analyzing' | 'done'>('idle');
   const [response, setResponse] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,9 +18,11 @@ export default function SubirPage() {
         setFile(selectedFile);
         setResponse(null);
         setError(null);
+        setStep('idle');
       } else {
         setError('Por favor selecciona un archivo PDF válido');
         setFile(null);
+        setStep('idle');
       }
     }
   };
@@ -29,7 +31,7 @@ export default function SubirPage() {
     e.preventDefault();
     if (!file) return;
 
-    setUploading(true);
+    setStep('uploading');
     setResponse(null);
     setError(null);
 
@@ -37,15 +39,20 @@ export default function SubirPage() {
     formData.append('file', file);
 
     try {
+      await new Promise(res => setTimeout(res, 800));
+      setStep('analyzing');
+
       const res = await axios.post('http://localhost:8000/analyze_pdf', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+
       setResponse(res.data);
       setFile(null);
+      setStep('done');
     } catch (err) {
       setError('Error al analizar el PDF. Por favor intente nuevamente.');
+      setStep('idle');
     }
-    setUploading(false);
   };
 
   return (
@@ -76,12 +83,13 @@ export default function SubirPage() {
                     type="file"
                     accept=".pdf"
                     onChange={handleFileChange}
-                    className="w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer border border-border rounded-lg"
+                    disabled={step === 'uploading' || step === 'analyzing'}
+                    className="w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer border border-border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <p className="text-sm text-muted-foreground">Solo archivos PDF. Tamaño máximo: 10MB</p>
                 </div>
 
-                {file && (
+                {file && step === 'idle' && (
                   <div className="bg-card border border-primary/20 rounded-lg p-4 flex items-start gap-3">
                     <FileText className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
@@ -95,15 +103,101 @@ export default function SubirPage() {
                   </div>
                 )}
 
-                {response && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-green-800 mb-2">¡Documento cargado exitosamente!</p>
-                      <div className="text-sm text-green-700 space-y-1">
-                        <p><span className="font-medium">ID del documento:</span> {response.document_id}</p>
-                        <p><span className="font-medium">Tiempo Gemini:</span> {response.gemini_processing_time_seconds}s</p>
-                        <p><span className="font-medium">Tiempo total:</span> {response.total_processing_time_seconds}s</p>
+                {/* Componente de Estado de Proceso */}
+                {(step === 'uploading' || step === 'analyzing' || step === 'done') && (
+                  <div className="bg-gradient-to-r from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl p-6 shadow-sm">
+                    <div className="space-y-4">
+                      {/* Paso 1: Subiendo */}
+                      <div className="flex items-center gap-4">
+                        <div className={`flex items-center justify-center w-10 h-10 rounded-full transition-all ${
+                          step === 'uploading' ? 'bg-blue-500' : step === 'analyzing' || step === 'done' ? 'bg-green-500' : 'bg-slate-300'
+                        }`}>
+                          {step === 'uploading' ? (
+                            <Loader2 className="w-5 h-5 text-white animate-spin" />
+                          ) : step === 'analyzing' || step === 'done' ? (
+                            <CheckCircle2 className="w-5 h-5 text-white" />
+                          ) : (
+                            <Upload className="w-5 h-5 text-white" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className={`font-semibold text-sm ${
+                            step === 'uploading' ? 'text-blue-700' : step === 'analyzing' || step === 'done' ? 'text-green-700' : 'text-slate-500'
+                          }`}>
+                            {step === 'uploading' ? 'Subiendo archivo...' : 'Archivo subido correctamente'}
+                          </p>
+                          <p className="text-xs text-slate-500">Enviando documento al servidor</p>
+                        </div>
+                      </div>
+
+                      {/* Línea conectora */}
+                      <div className={`ml-5 w-0.5 h-6 transition-all ${
+                        step === 'analyzing' || step === 'done' ? 'bg-green-500' : 'bg-slate-300'
+                      }`}></div>
+
+                      {/* Paso 2: Analizando */}
+                      <div className="flex items-center gap-4">
+                        <div className={`flex items-center justify-center w-10 h-10 rounded-full transition-all ${
+                          step === 'analyzing' ? 'bg-yellow-500' : step === 'done' ? 'bg-green-500' : 'bg-slate-300'
+                        }`}>
+                          {step === 'analyzing' ? (
+                            <Loader2 className="w-5 h-5 text-white animate-spin" />
+                          ) : step === 'done' ? (
+                            <CheckCircle2 className="w-5 h-5 text-white" />
+                          ) : (
+                            <AlertCircle className="w-5 h-5 text-white" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className={`font-semibold text-sm ${
+                            step === 'analyzing' ? 'text-yellow-700' : step === 'done' ? 'text-green-700' : 'text-slate-500'
+                          }`}>
+                            {step === 'analyzing' ? 'Analizando con IA...' : step === 'done' ? 'Análisis completado' : 'Esperando análisis'}
+                          </p>
+                          <p className="text-xs text-slate-500">Extrayendo información del documento</p>
+                        </div>
+                      </div>
+
+                      {/* Línea conectora */}
+                      {step === 'done' && (
+                        <>
+                          <div className="ml-5 w-0.5 h-6 bg-green-500"></div>
+
+                          {/* Paso 3: Completado */}
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500">
+                              <CheckCircle2 className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-semibold text-sm text-green-700">Proceso completado</p>
+                              <p className="text-xs text-slate-500">Documento guardado en base de datos</p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Resultados */}
+                {response && step === 'done' && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5" />
+                      Información del análisis
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-green-700 font-medium">ID del documento:</p>
+                        <p className="text-green-900">{response.document_id}</p>
+                      </div>
+                      <div>
+                        <p className="text-green-700 font-medium">Tiempo Gemini:</p>
+                        <p className="text-green-900">{response.gemini_processing_time_seconds}s</p>
+                      </div>
+                      <div>
+                        <p className="text-green-700 font-medium">Tiempo total:</p>
+                        <p className="text-green-900">{response.total_processing_time_seconds}s</p>
                       </div>
                     </div>
                   </div>
@@ -119,20 +213,11 @@ export default function SubirPage() {
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    disabled={!file || uploading}
+                    disabled={!file || step === 'uploading' || step === 'analyzing'}
                     className="flex-1 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {uploading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Subiendo...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4" />
-                        Subir y Analizar PDF
-                      </>
-                    )}
+                    <Upload className="w-4 h-4" />
+                    Subir y Analizar PDF
                   </button>
                   <Link href="/consultar">
                     <button

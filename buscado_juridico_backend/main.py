@@ -14,6 +14,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-ensure_collection()
+# ensure_collection() // No sera necesario llamarlo por el momento
 app.include_router(documento_router)
 app.include_router(crud_router)

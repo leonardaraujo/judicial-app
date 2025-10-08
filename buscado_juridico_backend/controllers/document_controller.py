@@ -17,7 +17,8 @@ UPLOAD_DIR = "uploaded_docs"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
+for model in genai.list_models():
+    print(model)
 router = APIRouter()
 
 PROMPT = """
@@ -43,7 +44,7 @@ Texto del documento:
 
 def extract_metadata(text):
     prompt = PROMPT + text
-    response = genai.GenerativeModel("models/gemini-2.5-flash").generate_content(prompt)
+    response = genai.GenerativeModel("models/gemini-2.5-flash-lite").generate_content(prompt)
     raw = response.text.strip()
     if raw.startswith("```"):
         raw = raw.split("```")[1]
@@ -90,8 +91,9 @@ async def analyze_pdf(file: UploadFile = File(...)):
     db.commit()
     db.refresh(document)
 
-    emb = get_embedding(text)
-    upsert_embedding(document.id, emb)
+    # emb = get_embedding(text)
+    # upsert_embedding(document.id, emb)
+    # Comentado: por el momento no se guardará el embedding en Qdrant
     db.close()
 
     total_end = time.time()
@@ -103,7 +105,8 @@ async def analyze_pdf(file: UploadFile = File(...)):
         "file_url": f"/documents/download/{document.id}",
         "gemini_processing_time_seconds": round(gemini_duration, 3),
         "total_processing_time_seconds": round(total_duration, 3),
-        "msg": "Document saved in PostgreSQL, file saved and embedding in Qdrant"
+        "msg": "Document saved in PostgreSQL, file saved"
+        # "msg": "Document saved in PostgreSQL, file saved and embedding in Qdrant"
     })
 
 @router.get("/documents/download/{document_id}")
