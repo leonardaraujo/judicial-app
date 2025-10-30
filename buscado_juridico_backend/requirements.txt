@@ -1,0 +1,18 @@
+fastapi==0.95.2
+uvicorn[standard]==0.22.0
+SQLAlchemy==2.0.19
+python-dotenv==1.0.0
+qdrant-client==1.6.2
+google-generativeai==0.4.0
+pydantic==1.10.11
+PyPDF2==3.0.1
+psycopg2
+transformers
+torch
+python-multipart
+# Notes:
+# - Versions chosen for stability as of 2025-10. If you use a newer Python (3.11+), consider upgrading package pins.
+# - `google-generativeai` is included because the code imports `google.generativeai`.
+# - `sentence-transformers` brings model helpers; `transformers` and `torch` are required for embeddings_service.
+# - If you prefer lighter CPU-only installs for torch, replace `torch` with the appropriate platform wheel or
+#   install torch separately following PyTorch instructions for your OS/GPU.
